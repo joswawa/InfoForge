@@ -1,0 +1,961 @@
+<?php
+session_start();
+include('server/connection.php');
+
+// If user has already logged in, redirect based on role
+if (isset($_SESSION['logged_in'])) {
+    if ($_SESSION['role'] === 'user') {
+        header('location: account.php');
+    } elseif ($_SESSION['role'] === 'admin') {
+        header('location: account.php');
+    }
+    exit;
+}
+
+if (isset($_POST['login_btn'])) {
+    $email = $_POST['email'];
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT); // Consider using password_hash() for stronger security
+
+    // Query to check user in the `users` table
+    $stmt = $conn->prepare("SELECT id, name, email, password FROM users WHERE email = ? AND password = ? LIMIT 1");
+    $stmt->bind_param('ss', $email, $password);
+
+    if ($stmt->execute()) {
+        $stmt->bind_result($user_id, $user_name, $user_email, $user_password);
+        $stmt->store_result();
+
+        if ($stmt->num_rows == 1) {
+            $stmt->fetch();
+            $_SESSION['user_id'] = $user_id;
+            $_SESSION['user_name'] = $user_name;
+            $_SESSION['user_email'] = $user_email;
+            $_SESSION['logged_in'] = true;
+            $_SESSION['role'] = 'user'; // Set role as user
+
+
+            header('location: account.php?login_success=logged in successfully');
+            exit;
+        }
+    }
+
+    // If not found in `users`, check the `admin` table
+    $stmt = $conn->prepare("SELECT ID, first_name, last_name, email, password, profile_picture FROM admintable WHERE email = ? LIMIT 1");
+    $stmt->bind_param('s', $email);
+
+    if ($stmt->execute()) {
+        $stmt->bind_result($admin_id, $admin_Fname, $admin_Lname, $admin_email, $admin_password, $profile_picture);
+        $stmt->store_result();
+
+        if ($stmt->num_rows == 1) {
+            $stmt->fetch();
+
+            // Concatenate first and last name
+            $admin_name = $admin_Fname . ' ' . $admin_Lname;
+
+            // Handle the profile picture (BLOB) data
+            if ($profile_picture) {
+                $_SESSION['profile_picture'] = $profile_picture; // Store the binary image data in the session
+            } else {
+                // Fallback if no profile picture is set in the database
+                $_SESSION['profile_picture'] = null;
+            }
+
+
+
+            // Continue with the login process
+            $_SESSION['admin_id'] = $admin_id;
+            $_SESSION['admin_name'] = $admin_name;
+            $_SESSION['admin_email'] = $admin_email;
+            $_SESSION['logged_in'] = true;
+            $_SESSION['role'] = 'admin'; // Set role as admin
+
+            header('location: http://localhost/InventoryManagementSystem/IMS_dashboard.php?login_success=logged in successfully');
+            exit;
+        } else {
+            header('location: login.php?error=could not verify your account');
+        }
+    } else {
+        header('location: login.php?error=something went wrong');
+    }
+}
+?>
+
+
+
+
+
+<!-- Header -->
+<?php include('layouts/header.php'); ?>
+
+<!-- LOGIN -->
+<section class=" d-flex align-items-center min-vh-100 login-section">
+    <div class="container mt-5 form-grid">
+        <div class="row g-0 mt-5" id="form-grid">
+            <div class="  col-lg-6 col-sm-12 d-flex align-items-center justify-content-start">
+                <div class="w-100 py-5 px-5 text-center card card-form">
+                    <div class="container text-center ">
+                        <h2 class="form-weight-bold">Login</h2>
+                        <!-- <hr class="mx-auto"> -->
+                    </div>
+                    <form id="login-form" method="POST" action="login.php">
+                        <p style="color: red" class="text-center">
+                            <?php if (isset($_GET['error'])) {
+                                echo $_GET['error'];
+                            } ?></p>
+                        <div class="form-group">
+                            <label for="login-email"><span>Email</span></label>
+                            <input class="form-control" type="email" name="email" id="login-email" placeholder="Email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input class="form-control" type="password" name="password" id="login-password"
+                                placeholder="Password" required>
+                        </div>
+                        <div class="form-group mt-3">
+                            <input class="btn btn-primary" id="login-btn" type="submit" name="login_btn" value="Login">
+                        </div>
+                        <div class="form-group mt-3">
+                            <p>Don't have an account? <a id="register-url" href="register.php" class="btn">Sign up here!</a></p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class=" col-lg-6 col-sm-12 d-flex justify-content-start  card card-description">
+                <div class="container mt-5">
+                    <h1 class="h1-infoforge">InfoForge</h1>
+                    <p class="p-infoforge">Build a pc, Browse, Shop.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+</section>
+
+<!-- Footer -->
+<?php include('layouts/footer.php'); ?>
+
+
+
+
+
+<!-- OLD login.php -->
+
+<?php
+session_start();
+include('server/connection.php');
+
+// If user has already logged in, redirect based on role
+if (isset($_SESSION['logged_in'])) {
+    if ($_SESSION['role'] === 'user') {
+        header('location: account.php');
+    } elseif ($_SESSION['role'] === 'admin') {
+        header('location: account.php');
+    }
+    exit;
+}
+
+if (isset($_POST['login_btn'])) {
+    $email = $_POST['email'];
+    $password = $_POST['password']; // Consider using password_hash() for stronger security
+
+    // Query to check user in the `users` table
+    $stmt = $conn->prepare("SELECT id, name, email, password FROM users WHERE email = ? AND password = ? LIMIT 1");
+    $stmt->bind_param('ss', $email, $password);
+
+    if ($stmt->execute()) {
+        $stmt->bind_result($user_id, $user_name, $user_email, $user_password);
+        $stmt->store_result();
+
+        if ($stmt->num_rows == 1) {
+            $stmt->fetch();
+            $_SESSION['user_id'] = $user_id;
+            $_SESSION['user_name'] = $user_name;
+            $_SESSION['user_email'] = $user_email;
+            $_SESSION['logged_in'] = true;
+            $_SESSION['role'] = 'user'; // Set role as user
+
+
+            header('location: index.php?login_success=logged in successfully');
+            exit;
+        }
+    }
+
+    // If not found in `users`, check the `admin` table
+    $stmt = $conn->prepare("SELECT ID, first_name, last_name, email, password, profile_picture FROM admintable WHERE email = ? LIMIT 1");
+    $stmt->bind_param('s', $email);
+
+    if ($stmt->execute()) {
+        $stmt->bind_result($admin_id, $admin_Fname, $admin_Lname, $admin_email, $admin_password, $profile_picture);
+        $stmt->store_result();
+
+        if ($stmt->num_rows == 1) {
+            $stmt->fetch();
+
+            // Verify the entered password against the hashed password from the database
+            if (password_verify($password, $admin_password)) {
+                // Concatenate first and last name
+                $admin_name = $admin_Fname . ' ' . $admin_Lname;
+
+                // Handle the profile picture (BLOB) data
+                if ($profile_picture) {
+                    $_SESSION['profile_picture'] = $profile_picture; // Store the binary image data in the session
+                } else {
+                    // Fallback if no profile picture is set in the database
+                    $_SESSION['profile_picture'] = null;
+                }
+
+                // Continue with the login process
+                $_SESSION['admin_id'] = $admin_id;
+                $_SESSION['admin_name'] = $admin_name;
+                $_SESSION['admin_email'] = $admin_email;
+                $_SESSION['logged_in'] = true;
+                $_SESSION['role'] = 'admin'; // Set role as admin
+
+                header('location: http://localhost/InventoryManagementSystem/IMS_dashboard.php?login_success=logged in successfully');
+                exit;
+            } else {
+                // Password did not match
+                header('location: login.php?error=invalid password');
+                exit;
+            }
+        } else {
+            header('location: login.php?error=could not verify your account');
+        }
+    } else {
+        header('location: login.php?error=something went wrong');
+    }
+}
+?>
+
+
+
+
+
+<!-- Header -->
+<?php include('layouts/header.php'); ?>
+
+<!-- LOGIN -->
+<section class="my-5 py-5">
+    <div class="container text-center mt-3 pt-5">
+        <h2 class="form-weight-bold">Login</h2>
+        <hr class="mx-auto">
+    </div>
+    <div class="mx-auto container w-25 text-center">
+        <form id="login-form" method="POST" action="login.php">
+            <p style="color: red" class="text-center"><?php if (isset($_GET['error'])) {
+                                                            echo $_GET['error'];
+                                                        } ?></p>
+            <div class="form-group">
+                <label for="login-email"><span>Email</span></label>
+                <input class="form-control" type="email" name="email" id="login-email" placeholder="Email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input class="form-control" type="password" name="password" id="login-password"
+                    placeholder="Password" required>
+            </div>
+            <div class="form-group mt-3">
+                <input class="btn btn-primary" id="login-btn" type="submit" name="login_btn" value="Login">
+            </div>
+            <div class="form-group mt-3">
+                <p>Don't have an account? <a id="register-url" href="register.php" class="btn">Sign up here!</a></p>
+            </div>
+            <div class="form-group mt-3">
+                <p>Forget Password? <a id="forgetpass-url" href="forget_pass.php" class="btn">Click here!</a></p>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- Footer -->
+<?php include('layouts/footer.php'); ?>
+
+
+
+
+
+
+
+<!-- Account.php -->
+
+<?php
+session_start();
+include('server/connection.php');
+include('server/mail.php'); // Include the mail.php file for the sendEmail function
+
+// Check if the user is logged in
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header('Location: login.php');
+    exit;
+}
+
+// Check if role is set in the session
+if (!isset($_SESSION['role'])) {
+    header('Location: login.php'); // Or you can redirect them to an error page
+    exit;
+}
+
+$user_email = $_SESSION['user_email']; // Assuming user_email is stored in session
+
+$user_role = $_SESSION['role']; // Assuming user role is stored in session
+
+// Get user verification status from the database
+$stmt = $conn->prepare("SELECT email_verified FROM users WHERE email = ?");
+if ($stmt === false) {
+    die('MySQL prepare error: ' . $conn->error); // Debugging line
+}
+$stmt->bind_param("s", $user_email);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+// Check the role and handle accordingly
+if ($user_role === 'admin') {
+    echo 'Admin Dashboard Content Goes Here';
+} elseif ($user_role === 'user') {
+    // If normal user, you can show user-specific content or redirect to user dashboard
+    echo 'User Dashboard Content Goes Here';
+} else {
+    // If role is undefined or invalid, redirect to login or an error page
+    header('Location: login.php');
+    exit;
+}
+
+// Get user verification status from the database
+$stmt = $conn->prepare("SELECT is_verified FROM users WHERE email = ?");
+$stmt->bind_param("s", $user_email);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+
+// Handle password change request
+if (isset($_POST['change_password'])) {
+    $password = $_POST['password'];
+    $confirmPassword = $_POST['confirmPassword'];
+
+    // Password validation
+    if ($password !== $confirmPassword) {
+        header('location: account.php?error=Passwords do not match');
+        exit;
+    } elseif (strlen($password) < 6) {
+        header('location: account.php?error=Password must be at least 6 characters');
+        exit;
+    } else {
+        $hash_password = password_hash($password, PASSWORD_BCRYPT);
+
+        $stmt = $conn->prepare("UPDATE users SET user_password=? WHERE user_email=?");
+        $stmt->bind_param('ss', $hash_password, $user_email);
+
+        if ($stmt->execute()) {
+            header('location: account.php?message=Password updated successfully');
+        } else {
+            header('location: account.php?error=Could not update password');
+        }
+    }
+}
+
+// Handle Verify Account request
+if (isset($_POST['action']) && $_POST['action'] === 'generate_verification_code') {
+    error_log("AJAX request received to generate verification code.");
+    $verification_code = rand(100000, 999999);
+
+    // Store the verification code in the database
+    $stmt = $conn->prepare("UPDATE users SET verification_code = ? WHERE email = ?");
+    $stmt->bind_param("is", $verification_code, $user_email);
+
+    if ($stmt->execute()) {
+        $subject = "Account Verification Code";
+        $message = "Your verification code is: $verification_code";
+
+        // Use the sendEmail function
+        if (sendEmail($user_email, $subject, $message)) {
+            echo json_encode(['status' => 'success', 'message' => 'Verification code sent to your email.']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Failed to send verification email.']);
+        }
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Failed to save verification code.']);
+    }
+    exit;
+}
+
+
+// Handle Logout
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('location: login.php');
+    exit;
+}
+
+// Fetch user orders
+if (isset($_SESSION['logged_in'])) {
+    $user_id = $_SESSION['user_id'];
+    $stmt = $conn->prepare("SELECT * FROM orders WHERE user_id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $orders = $stmt->get_result();
+}
+?>
+
+
+
+
+<!-- Header -->
+<?php include('layouts/header.php'); ?>
+
+<!-- Account Section -->
+<?php
+session_start();
+include('server/connection.php');
+include('server/mail.php');
+// include('mail.php');
+
+// Check if the user is logged in
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header('Location: login.php');
+    exit;
+}
+
+// Check if role is set in the session
+if (!isset($_SESSION['role'])) {
+    header('Location: login.php'); // Or you can redirect them to an error page
+    exit;
+}
+
+if ($_SESSION['role'] === 'user') {
+    $user_email = $_SESSION['user_email'];
+} elseif ($_SESSION['role'] === 'admin') {
+    $user_email = $_SESSION['admin_email'];
+} else {
+    // If role is undefined or invalid, redirect to login or an error page
+    header('Location: login.php');
+    exit;
+}
+$user_role = $_SESSION['role']; // Assuming user role is stored in session
+
+// Get user verification status from the database
+$stmt = $conn->prepare("SELECT is_verified FROM users WHERE email = ?");
+$stmt->bind_param("s", $user_email);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+// Handle password change request
+if (isset($_POST['change_password'])) {
+    $password = $_POST['password'];
+    $confirmPassword = $_POST['confirmPassword'];
+
+    // Password validation
+    if ($password !== $confirmPassword) {
+        header('location: account.php?error=Passwords do not match');
+        exit;
+    } elseif (strlen($password) < 6) {
+        header('location: account.php?error=Password must be at least 6 characters');
+        exit;
+    } else {
+        $hash_password = password_hash($password, PASSWORD_BCRYPT);
+
+        $stmt = $conn->prepare("UPDATE users SET password=? WHERE email=?");
+        $stmt->bind_param('ss', $hash_password, $user_email);
+
+        if ($stmt->execute()) {
+            header('location: account.php?message=Password updated successfully');
+        } else {
+            header('location: account.php?error=Could not update password');
+        }
+    }
+}
+
+// Handle Logout
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('location: login.php');
+    exit;
+}
+?>
+
+<!-- Header -->
+<?php include('layouts/header.php'); ?>
+
+<!-- Account Section -->
+<section class="my-5 py-5">
+    <!-- <div class="container-fluid mx-auto mt-5">
+        <div class="ms-5">
+            <h1 class="sage-color">Welcome back, <?php echo isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'Guest'; ?></h1>
+        </div>
+        
+        <hr class="w-100">
+    <div class="w-100 d-flex mt-5 account-nav">
+        <div class="h-100 p-3 selected-nav">
+            <h3 class="me-5 fw-normal" onclick="window.location.href='account.php'">My Account</h3>
+        </div>
+        <div class="h-100 p-3">
+            <h3 class="me-5 fw-normal" onclick="window.location.href='order-page.php'">My Orders</h3>
+        </div>
+        <div class="h-100 p-3">
+            <h3 class="me-5 fw-normal">Change Password</h3>
+        </div>
+    </div>
+
+    // -->
+
+    <div class="container-fluid pt-5">
+        <div class="ms-5">
+            <h1 class="sage-color">Welcome back, <?php echo isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'Guest'; ?></h1>
+        </div>
+
+        <hr class="w-100">
+
+        <!-- Responsive Navigation -->
+        <div class="d-flex justify-content-start align-items-center mt-5 account-nav flex-nowrap overflow-auto">
+            <div class="p-3 flex-shrink-0 pe-5 selected-nav">
+                <h3 class="fw-normal" onclick="window.location.href='account.php'">My Account</h3>
+            </div>
+            <div class="p-3 flex-shrink-0 pe-5 ">
+                <h3 class="fw-normal" onclick="window.location.href='order-page.php'">My Orders</h3>
+            </div>
+            <div class="p-3 flex-shrink-0 pe-5 ">
+                <h3 class="fw-normal">Change Password</h3>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Account Info -->
+    <div class="mt-3 pt-5 container">
+        <p class="" style="color:green">
+            <?php if (isset($_GET['register_success'])) {
+                echo $_GET['register_success'];
+            } ?>
+        </p>
+        <p class="" style="color:green">
+            <?php if (isset($_GET['login_success'])) {
+                echo $_GET['login_success'];
+            } ?>
+        </p>
+        <h1 class="font-weight-bold gray-color">Personal Details</h1>
+        <hr class="w-100 mb-5">
+        <div class="account-info mt-3">
+            <?php if ($user_role === 'admin') { ?>
+                <p>Name: <span> <?php echo isset($_SESSION['admin_name']) ? ucwords($_SESSION['admin_name']) : ''; ?> </span></p>
+                <p>Email: <span> <?php echo $_SESSION['admin_email'] ?? ''; ?></span></p>
+                <p style="color: green;">Admin</p>
+                <p><a href="#orders" id="orders-btn" class="text-primary">Orders</a></p>
+                <p><a href="account.php?logout=1" id="logout-btn" class="text-danger">Logout</a></p>
+
+            <?php } ?>
+            <!-- Verify Account Link or Verified/Admin Text -->
+            <?php if ($user_role === 'user') { ?>
+                <h4 class="mb-4">Name: <span class="ms-5"> <?php echo isset($_SESSION['user_name']) ? ucwords($_SESSION['user_name']) : ''; ?> </span></h4>
+                <h4 class="mb-5">Email: <span class="ms-5"> <?php echo $_SESSION['user_email'] ?? ''; ?></span></h4>
+                <hr class="w-100 mb-5">
+                <?php if ($user['is_verified'] == 0) { ?>
+                    <h4><a href="#" id="verify-link" style="color: #fca554; text-decoration: none;" data-toggle="modal" data-target="#verificationModal">Verify Account</a></p>
+                        <h4><a href="account.php?logout=1" id="logout-btn" class="text-danger">Logout</a></p>
+                        <?php } else { ?>
+                            <h4 style="color: green;">Verified</h4>
+
+                            <p><a href="#orders" id="orders-btn" class="text-primary">Your orders</a></p>
+                            <h4><a href="account.php?logout=1" id="logout-btn" class="text-danger">Logout</a></h4>
+                        <?php } ?>
+                    <?php } ?>
+        </div>
+
+    </div>
+    <!-- Change Password Form  -->
+    <?php if ($_SESSION['role'] === 'user') { ?>
+        <div class="col-lg-6 col-md-12 col-sm-12">
+
+        </div>
+    <?php } elseif ($_SESSION['role'] === 'admin') { ?>
+        <div class="col-lg-6 col-md-12 col-sm-12">
+            <form id="account-form" method="POST" action="account.php">
+                <p class="text-center" style="color:red"><?php if (isset($_GET['error'])) {
+                                                                echo $_GET['error'];
+                                                            } ?></p>
+                <p class="text-center" style="color:green"><?php if (isset($_GET['message'])) {
+                                                                echo $_GET['message'];
+                                                            } ?></p>
+                <h3 class="font-weight-bold">Admin Dashboard</h3>
+                <hr class="mx-auto">
+                <div class="form-group mt-4">
+                    <a href="http://localhost/InventoryManagementSystem/IMS_dashboard.php" class="btn btn-primary">Go to Admin Dashboard</a>
+                </div>
+            <?php } ?>
+
+            <!-- <iframe id="preview-frame" src="http://localhost/InventoryManagementSystem/IMS_dashboard.php" width="100%" height="200px" style="border: none;"></iframe> -->
+        </div>
+</section>
+
+<!-- Verification Modal -->
+<div class="modal fade" id="verificationModal" tabindex="-1" role="dialog" aria-labelledby="verificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="verificationModalLabel">Enter Verification Code</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="verify.php">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="verificationCode">Verification Code</label>
+                        <input type="text" class="form-control" name="verification_code" placeholder="Enter code" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Footer -->
+<?php include('layouts/footer.php'); ?>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#verify-link').click(function(e) {
+            e.preventDefault(); // Prevent default link behavior
+
+            // Show a loading state (optional)
+            $('#verify-link').text('Sending...').prop('disabled', true);
+
+            // Make AJAX request to generate verification code
+            $.ajax({
+                url: 'account.php', // The current page
+                type: 'POST',
+                data: {
+                    action: 'generate_verification_code'
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        $('#verificationModal').modal('show');
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function() {
+
+                    console.log()
+                    alert('An error occurred while processing your request.');
+                },
+                complete: function() {
+                    // Reset the button state
+                    $('#verify-link').text('Verify Account').prop('disabled', false);
+                }
+            });
+        });
+    });
+
+    // // modal
+    // document.addEventListener('DOMContentLoaded', function() {
+    //     // Get modal element
+    //     const changePasswordModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+
+    //     // Get "Change Password" link and bind click event
+    //     document.getElementById('changePasswordLink').addEventListener('click', function(event) {
+
+    //         console.log(document.getElementById('changePasswordLink'));
+    //         event.preventDefault(); // Prevent the link from navigating
+    //         changePasswordModal.show(); // Show the modal
+    //     });
+    // });
+</script>
+
+
+<!-- End of Account.php -->
+
+
+
+<!-- Old account.php -->
+<?php
+session_start();
+include('server/connection.php');
+include('server/mail.php');
+// include('mail.php');
+
+// Check if the user is logged in
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header('Location: login.php');
+    exit;
+}
+
+// Check if role is set in the session
+if (!isset($_SESSION['role'])) {
+    header('Location: login.php'); // Or you can redirect them to an error page
+    exit;
+}
+
+if ($_SESSION['role'] === 'user') {
+    $user_email = $_SESSION['user_email'];
+} elseif ($_SESSION['role'] === 'admin') {
+    $user_email = $_SESSION['admin_email'];
+} else {
+    // If role is undefined or invalid, redirect to login or an error page
+    header('Location: login.php');
+    exit;
+}
+$user_role = $_SESSION['role']; // Assuming user role is stored in session
+
+// Get user verification status from the database
+$stmt = $conn->prepare("SELECT is_verified FROM users WHERE email = ?");
+$stmt->bind_param("s", $user_email);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+
+// Handle password change request
+if (isset($_POST['change_password'])) {
+    $password = $_POST['password'];
+    $confirmPassword = $_POST['confirmPassword'];
+
+    // Password validation
+    if ($password !== $confirmPassword) {
+        header('location: account.php?error=Passwords do not match');
+        exit;
+    } elseif (strlen($password) < 6) {
+        header('location: account.php?error=Password must be at least 6 characters');
+        exit;
+    } else {
+        $hash_password = password_hash($password, PASSWORD_BCRYPT);
+
+        $stmt = $conn->prepare("UPDATE users SET password=? WHERE email=?");
+        $stmt->bind_param('ss', $hash_password, $user_email);
+
+        if ($stmt->execute()) {
+            header('location: account.php?message=Password updated successfully');
+        } else {
+            header('location: account.php?error=Could not update password');
+        }
+    }
+}
+
+// Handle Logout
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('location: login.php');
+    exit;
+}
+?>
+
+<!-- Header -->
+<?php include('layouts/header.php'); ?>
+
+<!-- Account Section -->
+<section class="my-5 py-5">
+    <div class="row container mx-auto">
+
+        <!-- Account Info -->
+        <div class="text-center mt-3 pt-5 col-lg-6 col-md-12 col-sm-12">
+            <p class="text-center" style="color:green">
+                <?php if (isset($_GET['register_success'])) {
+                    echo $_GET['register_success'];
+                } ?>
+            </p>
+            <p class="text-center" style="color:green">
+                <?php if (isset($_GET['login_success'])) {
+                    echo $_GET['login_success'];
+                } ?>
+            </p>
+            <p class="text-center" style="color:green">
+                <?php if (isset($_GET['verification_success'])) {
+                    echo $_GET['verification_success'];
+                } ?>
+            </p>
+            <h3 class="font-weight-bold">Account Info</h3>
+            <hr class="mx-auto">
+            <div class="account-info mt-3">
+                <!-- Verify Account Link or Verified/Admin Text -->
+
+                <p>Name: <span> <?php echo isset($_SESSION['user_name']) ? ucwords($_SESSION['user_name']) : ''; ?> </span></p>
+                <p>Email: <span> <?php echo $_SESSION['user_email'] ?? ''; ?></span></p>
+
+                <p><a href="account.php?logout=1" id="logout-btn" class="text-danger">Logout</a></p>
+
+
+                <p><a href="#orders" id="orders-btn" class="text-primary">Your orders</a></p>
+                <p><a href="account.php?logout=1" id="logout-btn" class="text-danger">Logout</a></p>
+
+            </div>
+
+        </div>
+        <!-- Change Password Form  -->
+        <?php if ($_SESSION['role'] === 'user') { ?>
+            <div class="col-lg-6 col-md-12 col-sm-12">
+
+            </div>
+        <?php } elseif ($_SESSION['role'] === 'admin') { ?>
+            <div class="col-lg-6 col-md-12 col-sm-12">
+                <form id="account-form" method="POST" action="account.php">
+                    <p class="text-center" style="color:red"><?php if (isset($_GET['error'])) {
+                                                                    echo $_GET['error'];
+                                                                } ?></p>
+                    <p class="text-center" style="color:green"><?php if (isset($_GET['message'])) {
+                                                                    echo $_GET['message'];
+                                                                } ?></p>
+                    <h3 class="font-weight-bold">Admin Dashboard</h3>
+                    <hr class="mx-auto">
+                    <div class="form-group mt-4">
+                        <a href="http://localhost/InventoryManagementSystem/IMS_dashboard.php" class="btn btn-primary">Go to Admin Dashboard</a>
+                    </div>
+                <?php } ?>
+
+                <!-- <iframe id="preview-frame" src="http://localhost/InventoryManagementSystem/IMS_dashboard.php" width="100%" height="200px" style="border: none;"></iframe> -->
+            </div>
+</section>
+
+<!-- Orders -->
+<section id="orders" class="orders container my-5 py-3">
+    <div class="container mt-2">
+        <h2 class="font-weight-bold text-center">Your Orders</h2>
+        <hr class="mx-auto">
+        <hr>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Product Name</th>
+                <th>Cost</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php while ($row = $orders->fetch_assoc()) { ?>
+                <tr>
+                    <td><span><?php echo $row['order_id']; ?></span></td>
+                    <td><span><?php echo $row['product_name']; ?></span></td>
+                    <td><span>₱<?php echo number_format($row['order_cost'], 2); ?></span></td>
+                    <td><span><?php echo $row['order_status']; ?></span></td>
+                    <td><span><?php echo $row['order_date']; ?></span></td>
+                    <td>
+                        <form method="POST" action="orders_details.php">
+                            <input type="hidden" value="<?php echo $row['order_status']; ?>" name="order_status" />
+                            <input type="hidden" value="<?php echo $row['order_id']; ?>" name="order_id" />
+                            <input type="submit" name="order_details_btn" class="btn btn-custom" value="details" />
+                        </form>
+                    </td>
+                </tr>
+            <?php } ?>
+
+            <?php while ($row = $PCorders->fetch_assoc()) { ?>
+                <tr>
+                    <td><span><?php echo $row['order_id']; ?></span></td>
+                    <td><span><?php echo $row['build_name']; ?></span></td>
+                    <td><span>₱<?php echo number_format($row['Total_price'], 2); ?></span></td>
+                    <td><span><?php echo $row['order_status']; ?></span></td>
+                    <td><span><?php echo $row['order_date']; ?></span></td>
+                    <td>
+                        <form method="POST" action="orders_details.php">
+                            <input type="hidden" value="<?php echo $row['order_status']; ?>" name="order_status" />
+                            <input type="hidden" value="<?php echo $row['order_id']; ?>" name="order_id" />
+                            <input type="submit" name="order_details_btn" class="btn btn-custom" value="details" />
+                        </form>
+                    </td>
+                </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</section>
+
+
+
+<!-- Verification Modal -->
+<!-- <div class="modal fade" id="verificationModal" tabindex="-1" role="dialog" aria-labelledby="verificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="verificationModalLabel">Enter Verification Code</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="verify.php">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="verificationCode">Verification Code</label>
+                        <input type="text" class="form-control" name="verification_code" placeholder="Enter code" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div> -->
+
+<!-- Footer -->
+<?php include('layouts/footer.php'); ?>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#verify-link').click(function(e) {
+            e.preventDefault(); // Prevent default link behavior
+
+            // Show a loading state (optional)
+            $('#verify-link').text('Sending...').prop('disabled', true);
+
+            // Make AJAX request to generate verification code
+            $.ajax({
+                url: 'account.php', // The current page
+                type: 'POST',
+                data: {
+                    action: 'generate_verification_code'
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        $('#verificationModal').modal('show');
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function() {
+
+                    console.log()
+                    alert('An error occurred while processing your request.');
+                },
+                complete: function() {
+                    // Reset the button state
+                    $('#verify-link').text('Verify Account').prop('disabled', false);
+                }
+            });
+        });
+    });
+
+    // // modal
+    // document.addEventListener('DOMContentLoaded', function() {
+    //     // Get modal element
+    //     const changePasswordModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+
+    //     // Get "Change Password" link and bind click event
+    //     document.getElementById('changePasswordLink').addEventListener('click', function(event) {
+
+    //         console.log(document.getElementById('changePasswordLink'));
+    //         event.preventDefault(); // Prevent the link from navigating
+    //         changePasswordModal.show(); // Show the modal
+    //     });
+    // });
+</script>
+<!-- End of Old Account.php -->
